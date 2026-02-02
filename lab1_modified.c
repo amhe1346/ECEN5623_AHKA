@@ -3,7 +3,7 @@
 /* Sam Siewert - 2005     
                                                   */
 
-//modified to run on linux  - Amy
+//modified to run on linux  -
 /*                                                                          */
 /****************************************************************************/
 
@@ -25,6 +25,8 @@
 sem_t semF10, semF20;
 int abortTest = 0 ;
 unsigned int fib10Cnt = 0 , fib20Cnt = 0 ;
+FILE *log_file = NULL;
+struct timespec prog_start_time;
 
 
 //FIBONACCI 
@@ -75,6 +77,9 @@ void* fib10(void* arg)
     if(abortTest) break ; 
 
     clock_gettime(CLOCK_MONOTONIC,&start);
+    double start_time = get_elapsed_time(&prog_start_time, &start) * 1000;
+    printf("[START] fib10 #%d\n", fib10Cnt + 1);
+    if(log_file) fprintf(log_file, "%.3f, fib10, START, %d\n", start_time, fib10Cnt + 1);
 
 	  
 	   FIB_TEST(FIB_LIMIT_FOR_32_BIT,50000);
@@ -82,8 +87,11 @@ void* fib10(void* arg)
 
 	   fib10Cnt++;
      elapsed = get_elapsed_time(&start,&end);
+     double end_time = get_elapsed_time(&prog_start_time, &end) * 1000;
      printf("fib10 #%d completed, elapsed: %.3f ms\n",fib10Cnt,elapsed *1000);
+     if(log_file) fprintf(log_file, "%.3f, fib10, COMPLETE, %d\n", end_time, fib10Cnt);
      //debug section tocheck if the elapsed time isgreater than 10 ms bc it will need to be changed on rpi 
+     // on pi 
      if(elapsed > .010){
       printf("Elapsed > 10 ms!\n");
      }
@@ -103,13 +111,19 @@ void* fib20(void* arg)
         if(abortTest) break; 
         
         clock_gettime(CLOCK_MONOTONIC, &start);
+        double start_time = get_elapsed_time(&prog_start_time, &start) * 1000;
+        printf("[START] fib20 #%d\n", fib20Cnt + 1);
+        if(log_file) fprintf(log_file, "%.3f, fib20, START, %d\n", start_time, fib20Cnt + 1);
+        
         FIB_TEST(FIB_LIMIT_FOR_32_BIT, 100000);  
         clock_gettime(CLOCK_MONOTONIC, &end);
         
         fib20Cnt++;
         elapsed = get_elapsed_time(&start,&end);
+        double end_time = get_elapsed_time(&prog_start_time, &end) * 1000;
 
         printf("fib20 #%d completed, elapsed: %.3f ms\n",fib20Cnt,elapsed *1000);
+        if(log_file) fprintf(log_file, "%.3f, fib20, COMPLETE, %d\n", end_time, fib20Cnt);
         //debug section tocheck if the elapsed time isgreater than 10 ms bc it will need to be changed on rpi 
         if(elapsed > .020){
           printf("Elapsed > 20 ms!\n");
@@ -126,7 +140,9 @@ int main(int argc, char *argv[])
   pthread_attr_t attr_fib10, attr_fib20;
   struct sched_param param_fib10,param_fib20, main_param;
   struct timespec delay;
-  int max_priority; 
+  int max_priority;
+  struct timespec prog_start, current_time;
+  double time_from_start; 
 
 
   
@@ -185,12 +201,18 @@ int main(int argc, char *argv[])
 
   printf("fib20 thread was made \n ");
 
+  // Start program timer
+  clock_gettime(CLOCK_MONOTONIC, &prog_start);
+
   // RELEASE AT SAME TIME 
-  printf("==RELEASE TIME (t=0)=== \n");
+  clock_gettime(CLOCK_MONOTONIC, &current_time);
+  time_from_start = get_elapsed_time(&prog_start, &current_time) * 1000;
+  printf("\n==RELEASE TIME (t=%.1f ms)=== \n", time_from_start);
+  printf("[RELEASE] fib10 #1 and fib20 #1\n");
   sem_post(&semF10);
   sem_post(&semF20);
 
-  int cycles = 10;
+  int cycles = 5;
   for(int i=0 ; i< cycles; i++)
   {
     printf("\n ==LCM cycle %d== \n, ", i+1);
@@ -205,7 +227,9 @@ int main(int argc, char *argv[])
     delay.tv_sec = 0;
     delay.tv_nsec = 20 * NSEC_PER_MSEC;
     nanosleep(&delay, NULL);
-    printf("t=20ms: Release fib10\n");
+    clock_gettime(CLOCK_MONOTONIC, &current_time);
+    time_from_start = get_elapsed_time(&prog_start, &current_time) * 1000;
+    printf("[RELEASE] fib10 at t=%.1f ms\n", time_from_start);
     sem_post(&semF10);
 
 
@@ -213,28 +237,42 @@ int main(int argc, char *argv[])
    
     delay.tv_nsec = 20 * NSEC_PER_MSEC;
     nanosleep(&delay, NULL);
-    printf("t=40ms: Release fib10\n");
+    clock_gettime(CLOCK_MONOTONIC, &current_time);
+    time_from_start = get_elapsed_time(&prog_start, &current_time) * 1000;
+    printf("[RELEASE] fib10 at t=%.1f ms\n", time_from_start);
     sem_post(&semF10);
 
     delay.tv_nsec = 20 * NSEC_PER_MSEC;
     nanosleep(&delay, NULL);
-    printf("t=60ms: Release fib10\n");
+    clock_gettime(CLOCK_MONOTONIC, &current_time);
+    time_from_start = get_elapsed_time(&prog_start, &current_time) * 1000;
+    printf("[RELEASE] fib10 at t=%.1f ms\n", time_from_start);
     sem_post(&semF10);
 
     delay.tv_nsec = 20 * NSEC_PER_MSEC;
     nanosleep(&delay, NULL);
-    printf("t=80ms: Release fib10\n");
+    clock_gettime(CLOCK_MONOTONIC, &current_time);
+    time_from_start = get_elapsed_time(&prog_start, &current_time) * 1000;
+    printf("[RELEASE] fib10 at t=%.1f ms\n", time_from_start);
     sem_post(&semF10);
 
     delay.tv_nsec = 20 * NSEC_PER_MSEC;
     nanosleep(&delay, NULL);
-    printf("t=100ms: Release fib10\n");
+    clock_gettime(CLOCK_MONOTONIC, &current_time);
+    time_from_start = get_elapsed_time(&prog_start, &current_time) * 1000;
+    printf("[RELEASE] fib10 and fib20 at t=%.1f ms (Critical Instant)\n", time_from_start);
     sem_post(&semF10);  
     sem_post(&semF20);
     
 
 
   }
+
+  // Wait for tasks to complete before cleanup
+  printf("\nWaiting for all tasks to complete...\n");
+  delay.tv_sec = 0;
+  delay.tv_nsec = 50 * NSEC_PER_MSEC;
+  nanosleep(&delay, NULL);
 
   printf("finish, clean up \n ");
     abortTest = 1;

@@ -77,15 +77,15 @@ void* fib10(void* arg)
     clock_gettime(CLOCK_MONOTONIC,&start);
 
 	  
-	   FIB_TEST(FIB_LIMIT_FOR_32_BIT,10000);
+	   FIB_TEST(FIB_LIMIT_FOR_32_BIT,50000);
      clock_gettime(CLOCK_MONOTONIC,&end);
 
 	   fib10Cnt++;
      elapsed = get_elapsed_time(&start,&end);
-     printf("fib10 #%d completed,elapsed: %.6f seconds\n",fib10Cnt,elapsed *1000);
+     printf("fib10 #%d completed, elapsed: %.3f ms\n",fib10Cnt,elapsed *1000);
      //debug section tocheck if the elapsed time isgreater than 10 ms bc it will need to be changed on rpi 
      if(elapsed > .010){
-      printf("Elapsed 10 ms!\n");
+      printf("Elapsed > 10 ms!\n");
      }
 
    }
@@ -103,16 +103,16 @@ void* fib20(void* arg)
         if(abortTest) break; 
         
         clock_gettime(CLOCK_MONOTONIC, &start);
-        FIB_TEST(FIB_LIMIT_FOR_32_BIT, 340000);  
+        FIB_TEST(FIB_LIMIT_FOR_32_BIT, 100000);  
         clock_gettime(CLOCK_MONOTONIC, &end);
         
         fib20Cnt++;
         elapsed = get_elapsed_time(&start,&end);
 
-        printf("fib20 #%d completed,elapsed: %.6f seconds\n",fib20Cnt,elapsed *1000);
+        printf("fib20 #%d completed, elapsed: %.3f ms\n",fib20Cnt,elapsed *1000);
         //debug section tocheck if the elapsed time isgreater than 10 ms bc it will need to be changed on rpi 
         if(elapsed > .020){
-          printf("Elapsed 20 ms!\n");
+          printf("Elapsed > 20 ms!\n");
      }
 
 

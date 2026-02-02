@@ -1,0 +1,48 @@
+ahka@raspberrypi:~/Exercise1/schedule $ sudo ./lab1_modified
+Starting Rate Monotonic Sched Test 
+S1 (fib10: C=10ms, T = 20ms 
+)S2 (fib20): C = 20 ms , T= 50 ms 
+LCM = 100 ms 
+fib10 was made 
+fib20 thread was made 
+ 
+==RELEASE TIME (t=0.0 ms)=== 
+[RELEASE] fib10 #1 and fib20 #1
+
+ ==LCM cycle 1== 
+, [START] fib10 #1
+[START] fib20 #1
+[RELEASE] fib10 at t=20.1 ms
+fib10 #1 completed, elapsed: 29.572 ms
+Elapsed > 10 ms!
+[START] fib10 #2
+[RELEASE] fib10 at t=40.2 ms
+fib10 #2 completed, elapsed: 29.378 ms
+Elapsed > 10 ms!
+[START] fib10 #3
+[RELEASE] fib10 at t=60.2 ms
+fib20 #1 completed, elapsed: 60.430 ms
+Elapsed > 20 ms!
+[RELEASE] fib10 at t=80.3 ms
+fib10 #3 completed, elapsed: 27.680 ms
+Elapsed > 10 ms!
+[START] fib10 #4
+[RELEASE] fib10 and fib20 at t=100.4 ms (Critical Instant)
+
+Waiting for all tasks to complete...
+[START] fib20 #2
+fib10 #4 completed, elapsed: 21.092 ms
+Elapsed > 10 ms!
+[START] fib10 #5
+fib10 #5 completed, elapsed: 20.886 ms
+Elapsed > 10 ms!
+[START] fib10 #6
+fib20 #2 completed, elapsed: 42.980 ms
+Elapsed > 20 ms!
+fib10 #6 completed, elapsed: 20.908 ms
+Elapsed > 10 ms!
+finish, clean up 
+ 
+Test completed:
+fib10 executions: 6
+fib20 executions: 2

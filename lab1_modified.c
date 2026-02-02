@@ -4,6 +4,12 @@
                                                   */
 
 //modified to run on linux  -
+
+// to get system log   
+//sudo grep "lab1_rms" /var/log/syslog | tail -50
+
+
+
 /*                                                                          */
 /****************************************************************************/
 
@@ -27,6 +33,8 @@ int abortTest = 0 ;
 unsigned int fib10Cnt = 0 , fib20Cnt = 0 ;
 FILE *log_file = NULL;
 struct timespec prog_start_time;
+int fibtentime = 38000;
+int fibtwentytime = 78000;
 
 
 //FIBONACCI 
@@ -79,16 +87,18 @@ void* fib10(void* arg)
     clock_gettime(CLOCK_MONOTONIC,&start);
     double start_time = get_elapsed_time(&prog_start_time, &start) * 1000;
     printf("[START] fib10 #%d\n", fib10Cnt + 1);
+    syslog(LOG_INFO, "[%.3f ms] fib10 #%d START", start_time, fib10Cnt + 1);
     if(log_file) fprintf(log_file, "%.3f, fib10, START, %d\n", start_time, fib10Cnt + 1);
 
 	  
-	   FIB_TEST(FIB_LIMIT_FOR_32_BIT,50000);
+	   FIB_TEST(FIB_LIMIT_FOR_32_BIT, fibtentime);
      clock_gettime(CLOCK_MONOTONIC,&end);
 
 	   fib10Cnt++;
      elapsed = get_elapsed_time(&start,&end);
      double end_time = get_elapsed_time(&prog_start_time, &end) * 1000;
      printf("fib10 #%d completed, elapsed: %.3f ms\n",fib10Cnt,elapsed *1000);
+     syslog(LOG_INFO, "[%.3f ms] fib10 #%d COMPLETE (exec: %.3f ms)", end_time, fib10Cnt, elapsed * 1000);
      if(log_file) fprintf(log_file, "%.3f, fib10, COMPLETE, %d\n", end_time, fib10Cnt);
      //debug section tocheck if the elapsed time isgreater than 10 ms bc it will need to be changed on rpi 
      // on pi 
@@ -113,9 +123,10 @@ void* fib20(void* arg)
         clock_gettime(CLOCK_MONOTONIC, &start);
         double start_time = get_elapsed_time(&prog_start_time, &start) * 1000;
         printf("[START] fib20 #%d\n", fib20Cnt + 1);
+        syslog(LOG_INFO, "[%.3f ms] fib20 #%d START", start_time, fib20Cnt + 1);
         if(log_file) fprintf(log_file, "%.3f, fib20, START, %d\n", start_time, fib20Cnt + 1);
         
-        FIB_TEST(FIB_LIMIT_FOR_32_BIT, 100000);  
+        FIB_TEST(FIB_LIMIT_FOR_32_BIT, fibtwentytime);  
         clock_gettime(CLOCK_MONOTONIC, &end);
         
         fib20Cnt++;
@@ -123,6 +134,7 @@ void* fib20(void* arg)
         double end_time = get_elapsed_time(&prog_start_time, &end) * 1000;
 
         printf("fib20 #%d completed, elapsed: %.3f ms\n",fib20Cnt,elapsed *1000);
+        syslog(LOG_INFO, "[%.3f ms] fib20 #%d COMPLETE (exec: %.3f ms)", end_time, fib20Cnt, elapsed * 1000);
         if(log_file) fprintf(log_file, "%.3f, fib20, COMPLETE, %d\n", end_time, fib20Cnt);
         //debug section tocheck if the elapsed time isgreater than 10 ms bc it will need to be changed on rpi 
         if(elapsed > .020){
@@ -149,8 +161,16 @@ int main(int argc, char *argv[])
 
   printf( "Starting Rate Monotonic Sched Test \n");
   printf("S1 (fib10: C=10ms, T = 20ms \n)");
+  // service one worstcase is 10 mseconds the deadline is every 20 ms 
   printf("S2 (fib20): C = 20 ms , T= 50 ms \n");
+  // service 2 worstcase is 20 ms the deadline is every 50 ms 
+
   printf("LCM = 100 ms \n");
+  // the lcm is 100 .
+  
+  // Open syslog
+  openlog("lab1_rms", LOG_PID | LOG_CONS, LOG_USER);
+  syslog(LOG_INFO, "=== Rate Monotonic Schedule Test Started ==="); 
 
   // main needs max priority 
   max_priority = sched_get_priority_max(SCHED_FIFO);
@@ -212,7 +232,7 @@ int main(int argc, char *argv[])
   sem_post(&semF10);
   sem_post(&semF20);
 
-  int cycles = 5;
+  int cycles = 1;
   for(int i=0 ; i< cycles; i++)
   {
     printf("\n ==LCM cycle %d== \n, ", i+1);
@@ -289,7 +309,9 @@ int main(int argc, char *argv[])
     printf("\nTest completed:\n");
     printf("fib10 executions: %d\n", fib10Cnt);
     printf("fib20 executions: %d\n", fib20Cnt);
-
+    
+    syslog(LOG_INFO, "=== Test Completed: fib10=%d, fib20=%d ===", fib10Cnt, fib20Cnt);
+    closelog();
 
     return 0;
 }

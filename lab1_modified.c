@@ -1,0 +1,257 @@
+/****************************************************************************/
+/*                                                                          */
+/* Sam Siewert - 2005     
+                                                  */
+
+//modified to run on linux  - Amy
+/*                                                                          */
+/****************************************************************************/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <pthread.h>
+#include <semaphore.h>
+#include <time.h>
+#include <sched.h>
+#include <unistd.h>
+#include <syslog.h>
+#include <string.h>
+#include <errno.h>
+
+#define FIB_LIMIT_FOR_32_BIT 47
+#define NSEC_PER_MSEC 1000000
+#define NSEC_PER_SEC 1000000000
+
+sem_t semF10, semF20;
+int abortTest = 0 ;
+unsigned int fib10Cnt = 0 , fib20Cnt = 0 ;
+
+
+//FIBONACCI 
+void FIB_TEST(unsigned int seqCnt, unsigned int iterCnt)   
+   {
+    unsigned int idx, jdx;
+    unsigned int fib = 0 , fib0 =0 , fib1 =1; 
+
+   for(idx=0; idx < iterCnt; idx++)    
+   {        
+      jdx= 1;
+      fib0 =0 ;
+      fib1 =1;                          
+      fib = fib0 + fib1;               
+      while(jdx < seqCnt)              
+      {                                
+         fib0 = fib1;                  
+         fib1 = fib;                   
+         fib = fib0 + fib1;            
+         jdx++;                        
+      }                                
+   }                                   
+  }
+
+double get_elapsed_time(struct timespec *start, struct timespec *end)
+{
+    return (end->tv_sec - start->tv_sec) + 
+           (end->tv_nsec - start->tv_nsec) / 1e9;
+}
+
+/* Iterations, 2nd arg must be tuned for any given target type
+   using windview
+   
+   170000 <= 10 msecs on Pentium at home
+   
+   Be very careful of WCET overloading CPU during first period of
+   LCM.
+   
+ */
+void* fib10(void* arg)
+{
+  struct timespec start, end;
+  double elapsed;
+
+   while(!abortTest)
+   {
+    sem_wait(&semF10);
+    if(abortTest) break ; 
+
+    clock_gettime(CLOCK_MONOTONIC,&start);
+
+	  
+	   FIB_TEST(FIB_LIMIT_FOR_32_BIT,10000);
+     clock_gettime(CLOCK_MONOTONIC,&end);
+
+	   fib10Cnt++;
+     elapsed = get_elapsed_time(&start,&end);
+     printf("fib10 #%d completed,elapsed: %.6f seconds\n",fib10Cnt,elapsed *1000);
+     //debug section tocheck if the elapsed time isgreater than 10 ms bc it will need to be changed on rpi 
+     if(elapsed > .010){
+      printf("Elapsed 10 ms!\n");
+     }
+
+   }
+   return NULL;
+}
+
+void* fib20(void* arg)
+{
+    struct timespec start, end;
+    double elapsed ; 
+    
+    while(!abortTest)
+    {
+        sem_wait(&semF20);
+        if(abortTest) break; 
+        
+        clock_gettime(CLOCK_MONOTONIC, &start);
+        FIB_TEST(FIB_LIMIT_FOR_32_BIT, 340000);  
+        clock_gettime(CLOCK_MONOTONIC, &end);
+        
+        fib20Cnt++;
+        elapsed = get_elapsed_time(&start,&end);
+
+        printf("fib20 #%d completed,elapsed: %.6f seconds\n",fib20Cnt,elapsed *1000);
+        //debug section tocheck if the elapsed time isgreater than 10 ms bc it will need to be changed on rpi 
+        if(elapsed > .020){
+          printf("Elapsed 20 ms!\n");
+     }
+
+
+    }
+    return NULL;
+}
+
+int main(int argc, char *argv[])
+{
+  pthread_t thread_fib10, thread_fib20;
+  pthread_attr_t attr_fib10, attr_fib20;
+  struct sched_param param_fib10,param_fib20, main_param;
+  struct timespec delay;
+  int max_priority; 
+
+
+  
+
+  printf( "Starting Rate Monotonic Sched Test \n");
+  printf("S1 (fib10: C=10ms, T = 20ms \n)");
+  printf("S2 (fib20): C = 20 ms , T= 50 ms \n");
+  printf("LCM = 100 ms \n");
+
+  // main needs max priority 
+  max_priority = sched_get_priority_max(SCHED_FIFO);
+  main_param.sched_priority = max_priority;
+
+  // Set main process scheduler
+  if(sched_setscheduler(0, SCHED_FIFO, &main_param) != 0) {
+    perror("Failed to set scheduler - run with sudo");
+    return 1;
+  }
+
+  //Semaphores :)
+  sem_init(&semF10,0,0);
+  sem_init(&semF20,0,0);
+
+  //max FIFO
+
+ 
+  // configure thread for fib10  
+  // set the priority to max-1 
+  // set the scheddule to fifo 
+  //
+  pthread_attr_init(&attr_fib10);
+  pthread_attr_setinheritsched(&attr_fib10, PTHREAD_EXPLICIT_SCHED);
+  pthread_attr_setschedpolicy(&attr_fib10, SCHED_FIFO);
+  param_fib10.sched_priority = max_priority - 1;
+  pthread_attr_setschedparam(&attr_fib10, &param_fib10);
+  
+  // Configure fib20 thread to max -2  and sched FIFO 
+  pthread_attr_init(&attr_fib20);
+  pthread_attr_setinheritsched(&attr_fib20, PTHREAD_EXPLICIT_SCHED);
+  pthread_attr_setschedpolicy(&attr_fib20, SCHED_FIFO);
+  param_fib20.sched_priority = max_priority - 2;
+  pthread_attr_setschedparam(&attr_fib20, &param_fib20);
+
+  if(pthread_create(&thread_fib10, &attr_fib10,fib10,NULL)!=0)
+  {
+    printf("didnot make the fib 10 thread \n");
+    return 1;
+  }
+  printf("fib10 was made \n");
+
+    if(pthread_create(&thread_fib20, &attr_fib20,fib20,NULL)!=0)
+  {
+    printf("did not make the fib 20 thread \n");
+    return 1;
+  }
+
+  printf("fib20 thread was made \n ");
+
+  // RELEASE AT SAME TIME 
+  printf("==RELEASE TIME (t=0)=== \n");
+  sem_post(&semF10);
+  sem_post(&semF20);
+
+  int cycles = 10;
+  for(int i=0 ; i< cycles; i++)
+  {
+    printf("\n ==LCM cycle %d== \n, ", i+1);
+
+    // t= 20 ms release fib 10 
+    // it has to be schedueld to rease at time intervals to check that the preemption 
+    // to check that the realtimebehavior is correct 
+    // i wanted tohave the semaphores passed back and forth to each other but 
+    // that is wrong bcitneeds tonotbe coop multitasking but hard deadlines 
+
+    // t=20ms: Release fib10
+    delay.tv_sec = 0;
+    delay.tv_nsec = 20 * NSEC_PER_MSEC;
+    nanosleep(&delay, NULL);
+    printf("t=20ms: Release fib10\n");
+    sem_post(&semF10);
+
+
+    // t=40ms: Release fib10
+   
+    delay.tv_nsec = 20 * NSEC_PER_MSEC;
+    nanosleep(&delay, NULL);
+    printf("t=40ms: Release fib10\n");
+    sem_post(&semF10);
+
+    delay.tv_nsec = 20 * NSEC_PER_MSEC;
+    nanosleep(&delay, NULL);
+    printf("t=60ms: Release fib10\n");
+    sem_post(&semF10);
+
+    delay.tv_nsec = 20 * NSEC_PER_MSEC;
+    nanosleep(&delay, NULL);
+    printf("t=80ms: Release fib10\n");
+    sem_post(&semF10);
+
+    delay.tv_nsec = 20 * NSEC_PER_MSEC;
+    nanosleep(&delay, NULL);
+    printf("t=100ms: Release fib10\n");
+    sem_post(&semF10);  
+    sem_post(&semF20);
+    
+
+
+  }
+
+  printf("finish, clean up \n ");
+    abortTest = 1;
+    sem_post(&semF10);
+    sem_post(&semF20);
+    
+    pthread_join(thread_fib10, NULL);
+    pthread_join(thread_fib20, NULL);
+    
+    sem_destroy(&semF10);
+    sem_destroy(&semF20);
+
+
+    printf("\nTest completed:\n");
+    printf("fib10 executions: %d\n", fib10Cnt);
+    printf("fib20 executions: %d\n", fib20Cnt);
+
+
+    return 0;
+}

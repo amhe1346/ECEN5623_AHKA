@@ -1,0 +1,21 @@
+ahka@raspberrypi:~/Exercise1/schedule $ tail /var/log/syslog --lines=20
+Feb  1 21:06:35 raspberrypi dbus-daemon[586]: [system] Successfully activated service 'org.freedesktop.PackageKit'
+Feb  1 21:06:35 raspberrypi systemd[1]: Started packagekit.service - PackageKit Daemon.
+Feb  1 21:06:50 raspberrypi lab1_rms[2503]: === Rate Monotonic Schedule Test Started ===
+Feb  1 21:06:50 raspberrypi lab1_rms[2503]: [1150887.230 ms] fib10 #1 START
+Feb  1 21:06:50 raspberrypi lab1_rms[2503]: [1150887.232 ms] fib20 #1 START
+Feb  1 21:06:50 raspberrypi lab1_rms[2503]: [1150916.783 ms] fib10 #1 COMPLETE (exec: 29.552 ms)
+Feb  1 21:06:50 raspberrypi lab1_rms[2503]: [1150916.892 ms] fib10 #2 START
+Feb  1 21:06:50 raspberrypi lab1_rms[2503]: [1150946.206 ms] fib10 #2 COMPLETE (exec: 29.314 ms)
+Feb  1 21:06:50 raspberrypi lab1_rms[2503]: [1150946.345 ms] fib10 #3 START
+Feb  1 21:06:50 raspberrypi lab1_rms[2503]: [1150947.692 ms] fib20 #1 COMPLETE (exec: 60.460 ms)
+Feb  1 21:06:50 raspberrypi lab1_rms[2503]: [1150975.937 ms] fib10 #3 COMPLETE (exec: 29.592 ms)
+Feb  1 21:06:50 raspberrypi lab1_rms[2503]: [1150976.074 ms] fib10 #4 START
+Feb  1 21:06:50 raspberrypi lab1_rms[2503]: [1150987.726 ms] fib20 #2 START
+Feb  1 21:06:50 raspberrypi lab1_rms[2503]: [1151005.426 ms] fib10 #4 COMPLETE (exec: 29.352 ms)
+Feb  1 21:06:50 raspberrypi lab1_rms[2503]: [1151005.530 ms] fib10 #5 START
+Feb  1 21:06:50 raspberrypi lab1_rms[2503]: [1151034.918 ms] fib10 #5 COMPLETE (exec: 29.388 ms)
+Feb  1 21:06:50 raspberrypi lab1_rms[2503]: [1151035.025 ms] fib10 #6 START
+Feb  1 21:06:50 raspberrypi lab1_rms[2503]: [1151047.950 ms] fib20 #2 COMPLETE (exec: 60.225 ms)
+Feb  1 21:06:50 raspberrypi lab1_rms[2503]: [1151064.463 ms] fib10 #6 COMPLETE (exec: 29.438 ms)
+Feb  1 21:06:50 raspberrypi lab1_rms[2503]: === Test Completed: fib10=6, fib20=2 ===

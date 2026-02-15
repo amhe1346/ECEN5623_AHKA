@@ -33,6 +33,7 @@ U32_T ex5_wcet[] = {1,2,1};
 // U=.996
 U32_T ex6_period[] = {2,5,7,13};
 U32_T ex6_wcet[] = {1,1,1,2};
+U32_T ex6_deadline[] = {2,3,7,15};  // DM deadlines different from periods
 
 // U=1.0
 U32_T ex7_period[] = {3,5,15};
@@ -255,9 +256,70 @@ int llf_util_feasibility(U32_T numServices, U32_T period[], U32_T wcet[], U32_T 
 
 int dm_feasibility(U32_T numServices, U32_T period[], U32_T wcet[], U32_T deadline[])
 {
-    // For deadline = period case, DM is identical to RM
-    // So we can reuse the existing completion_time_feasibility function
-    return completion_time_feasibility(numServices, period, wcet, deadline);
+    int i, j, k;
+    U32_T an, anext;
+    int set_feasible = TRUE;
+    
+    // Create arrays to store deadline-sorted task parameters
+    U32_T sorted_period[10], sorted_wcet[10], sorted_deadline[10];
+    int task_indices[10];
+    
+    // Initialize indices for original task order
+    for (i = 0; i < numServices; i++) {
+        task_indices[i] = i;
+    }
+    
+    // Sort tasks by deadline (DM priority assignment)
+    // Bubble sort based on deadlines - shortest deadline = highest priority
+    for (i = 0; i < numServices - 1; i++) {
+        for (j = 0; j < numServices - i - 1; j++) {
+            if (deadline[task_indices[j]] > deadline[task_indices[j + 1]]) {
+                // Swap indices
+                int temp = task_indices[j];
+                task_indices[j] = task_indices[j + 1];
+                task_indices[j + 1] = temp;
+            }
+        }
+    }
+    
+    // Create sorted arrays based on deadline priority order
+    for (i = 0; i < numServices; i++) {
+        sorted_period[i] = period[task_indices[i]];
+        sorted_wcet[i] = wcet[task_indices[i]];
+        sorted_deadline[i] = deadline[task_indices[i]];
+    }
+    
+    // Apply response time analysis with DM priority ordering
+    for (i = 0; i < numServices; i++) {
+        an = 0; anext = 0;
+        
+        // Initial response time estimate
+        for (j = 0; j <= i; j++) {
+            an += sorted_wcet[j];
+        }
+        
+        // Iterative response time calculation: R_i = C_i + Σ(⌈R_i/T_j⌉ × C_j) for all j < i
+        while (1) {
+            anext = sorted_wcet[i];
+            
+            // Add interference from higher priority tasks (j < i in DM order)
+            for (j = 0; j < i; j++) {
+                anext += ceil(((double)an)/((double)sorted_period[j])) * sorted_wcet[j];
+            }
+            
+            if (anext == an)
+                break;
+            else
+                an = anext;
+        }
+        
+        // Check if response time meets deadline
+        if (an > sorted_deadline[i]) {
+            set_feasible = FALSE;
+        }
+    }
+    
+    return set_feasible;
 }
 
 int main(void)
@@ -270,6 +332,9 @@ int main(void)
     
     // Special handling for Example 6: RM and DM comparison
     printf("******** Example 6: RM and DM Comparison\n");
+    printf("RM Priority Order (by period): T1(2) > T2(5) > T3(7) > T4(13)\n");
+    printf("DM Priority Order (by deadline): T1(2) > T2(3) > T3(7) > T4(15)\n\n");
+    
     printf("Ex-6 RM U=%.2f: ", examples[6].utilization);
     if(completion_time_feasibility(examples[6].numTasks,
                                  examples[6].period, 
@@ -283,7 +348,7 @@ int main(void)
     if(dm_feasibility(examples[6].numTasks,
                      examples[6].period, 
                      examples[6].wcet, 
-                     examples[6].period) == TRUE)
+                     ex6_deadline) == TRUE)  // Use actual DM deadlines
         printf("FEASIBLE\n");
     else
         printf("INFEASIBLE\n");
